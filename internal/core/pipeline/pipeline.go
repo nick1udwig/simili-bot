@@ -1,3 +1,8 @@
+// Author: Kaviru Hapuarachchi
+// GitHub: https://github.com/Kavirubc
+// Created: 2026-02-02
+// Last Modified: 2026-02-02
+
 // Package pipeline provides the core pipeline engine for Simili-Bot.
 // It defines the Step interface and Context structure used by all pipeline steps.
 package pipeline
@@ -40,16 +45,17 @@ type Issue struct {
 
 // Result holds the accumulated results from pipeline execution.
 type Result struct {
-	IssueNumber    int
-	Skipped        bool
-	SkipReason     string
-	SimilarFound   []SimilarIssue
-	TransferTarget string
-	Transferred    bool
-	CommentPosted  bool
-	Indexed        bool
-	LabelsApplied  []string
-	Errors         []error
+	IssueNumber     int
+	Skipped         bool
+	SkipReason      string
+	SimilarFound    []SimilarIssue
+	TransferTarget  string
+	Transferred     bool
+	CommentPosted   bool
+	Indexed         bool
+	SuggestedLabels []string
+	LabelsApplied   []string
+	Errors          []error
 }
 
 // SimilarIssue represents an issue found to be similar.

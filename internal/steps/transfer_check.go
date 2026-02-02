@@ -1,3 +1,8 @@
+// Author: Kaviru Hapuarachchi
+// GitHub: https://github.com/Kavirubc
+// Created: 2026-02-02
+// Last Modified: 2026-02-02
+
 // Package steps provides the transfer check step.
 package steps
 
@@ -11,7 +16,7 @@ import (
 type TransferCheck struct{}
 
 // NewTransferCheck creates a new transfer check step.
-func NewTransferCheck() *TransferCheck {
+func NewTransferCheck(deps *pipeline.Dependencies) *TransferCheck {
 	return &TransferCheck{}
 }
 

@@ -1,3 +1,8 @@
+// Author: Kaviru Hapuarachchi
+// GitHub: https://github.com/Kavirubc
+// Created: 2026-02-02
+// Last Modified: 2026-02-02
+
 // Package steps contains the modular "Lego block" pipeline steps.
 // Each step implements the pipeline.Step interface.
 package steps
@@ -13,7 +18,7 @@ import (
 type Gatekeeper struct{}
 
 // NewGatekeeper creates a new gatekeeper step.
-func NewGatekeeper() *Gatekeeper {
+func NewGatekeeper(deps *pipeline.Dependencies) *Gatekeeper {
 	return &Gatekeeper{}
 }
 

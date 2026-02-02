@@ -1,9 +1,18 @@
+// Author: Kaviru Hapuarachchi
+// GitHub: https://github.com/Kavirubc
+// Created: 2026-02-02
+// Last Modified: 2026-02-02
+
 // Package pipeline provides step registration and preset workflow building.
 package pipeline
 
 import (
 	"fmt"
 	"sync"
+
+	"github.com/similigh/simili-bot/internal/integrations/gemini"
+	"github.com/similigh/simili-bot/internal/integrations/github"
+	"github.com/similigh/simili-bot/internal/integrations/qdrant"
 )
 
 // Registry holds registered step factories.
@@ -19,8 +28,44 @@ type StepFactory func(deps *Dependencies) (Step, error)
 
 // Dependencies holds the dependencies that can be injected into steps.
 type Dependencies struct {
-	// Add common dependencies here as the project grows.
-	// For now, this is a placeholder for future extensibility.
+	Embedder    *gemini.Embedder
+	LLMClient   *gemini.LLMClient
+	VectorStore qdrant.VectorStore
+	GitHub      *github.Client
+	DryRun      bool
+}
+
+// Close releases any resources held by the dependencies.
+// It is safe to call multiple times; subsequent calls will be no-ops
+// once all underlying resources have been closed.
+func (d *Dependencies) Close() error {
+	if d == nil {
+		return nil
+	}
+
+	var firstErr error
+
+	if d.Embedder != nil {
+		if err := d.Embedder.Close(); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+
+	if d.LLMClient != nil {
+		if err := d.LLMClient.Close(); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+
+	if d.VectorStore != nil {
+		if err := d.VectorStore.Close(); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+
+	// GitHub client doesn't have a Close method in go-github
+
+	return firstErr
 }
 
 // NewRegistry creates a new step registry.
