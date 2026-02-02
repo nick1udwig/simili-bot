@@ -31,3 +31,8 @@ go.work.sum
 # .idea/
 # .vscode/
 .env.local
+
+# Local binaries and configs
+simili
+
+
