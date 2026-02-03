@@ -102,3 +102,27 @@ func (c *Client) ListComments(ctx context.Context, org, repo string, number int,
 	}
 	return comments, resp, nil
 }
+
+// GetFileContent fetches the raw content of a file from a repository.
+// ref can be a branch, tag, or commit SHA. If empty, the default branch is used.
+func (c *Client) GetFileContent(ctx context.Context, org, repo, path, ref string) ([]byte, error) {
+	opts := &github.RepositoryContentGetOptions{
+		Ref: ref,
+	}
+
+	fileContent, _, _, err := c.client.Repositories.GetContents(ctx, org, repo, path, opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get file content for %s/%s/%s: %w", org, repo, path, err)
+	}
+
+	if fileContent == nil {
+		return nil, fmt.Errorf("file content is nil")
+	}
+
+	content, err := fileContent.GetContent()
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode file content: %w", err)
+	}
+
+	return []byte(content), nil
+}

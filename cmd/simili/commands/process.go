@@ -55,16 +55,60 @@ func init() {
 
 func runProcess() {
 	// 1. Load Configuration
-	cfgPath := config.FindConfigPath("")
-	cfg, err := config.Load(cfgPath)
-	if err != nil {
-		if cfgPath != "" {
-			fmt.Printf("Error loading config: %v\n", err)
-			os.Exit(1)
+	// Parse flags is handled by cobra, ensuring cfgFile is set if provided
+
+	// Prepare fetcher for inheritance
+	// We need a temporary client for fetching config if needed
+	var configToken string
+	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		configToken = token
+	}
+
+	fetcher := func(ref string) ([]byte, error) {
+		// Parse ref: org/repo@branch:path
+		org, repo, branch, path, err := config.ParseExtendsRef(ref)
+		if err != nil {
+			return nil, err
 		}
-		// If no config found, proceed with zero config
+
+		if configToken == "" {
+			return nil, fmt.Errorf("GITHUB_TOKEN required to fetch remote config %s", ref)
+		}
+
+		ghClient := github.NewClient(context.Background(), configToken)
+		return ghClient.GetFileContent(context.Background(), org, repo, path, branch)
+	}
+
+	// Load config with inheritance
+	// Use cfgFile from flags if set, otherwise find default
+	actualCfgPath := cfgFile
+	if actualCfgPath == "" {
+		actualCfgPath = config.FindConfigPath("")
+	}
+
+	var cfg *config.Config
+	var err error
+
+	if actualCfgPath != "" {
+		cfg, err = config.LoadWithInheritance(actualCfgPath, fetcher)
+		if err != nil {
+			fmt.Printf("Warning: Failed to load config from %s: %v. Proceeding with defaults/env vars.\n", actualCfgPath, err)
+			cfg = &config.Config{} // Fallback to empty config
+		} else {
+			if verbose {
+				fmt.Printf("Loaded config from %s\n", actualCfgPath)
+			}
+		}
+	} else {
+		// No config file found
+		if verbose {
+			fmt.Println("No configuration file found. Using defaults and environment variables.")
+		}
 		cfg = &config.Config{}
 	}
+	// Apply defaults just in case
+	// Note: applyDefaults is private in config package, ensuring config.Load* handles it.
+	// Since we might have created a fresh struct, we rely on zero values and manual overrides below.
 
 	// 2. Load Issue
 	var issue pipeline.Issue
@@ -98,7 +142,7 @@ func runProcess() {
 	statusChan := make(chan tui.PipelineStatusMsg)
 
 	// Determine steps
-	stepNames := pipeline.ResolveSteps(nil, workflow)
+	stepNames := pipeline.ResolveSteps(cfg.Steps, workflow)
 
 	// Initialize Dependencies
 	// TODO: This should ideally be dependent on flags/config, potentially mocking interfaces if dry-run
@@ -111,22 +155,37 @@ func runProcess() {
 
 	// Initialize clients with error logging
 	// Embedder
-	if apiKey := os.Getenv("GEMINI_API_KEY"); apiKey != "" {
-		embedder, err := gemini.NewEmbedder(apiKey)
+	// Check config then env
+	geminiKey := cfg.Embedding.APIKey
+	if geminiKey == "" {
+		geminiKey = os.Getenv("GEMINI_API_KEY")
+	}
+
+	if geminiKey != "" {
+		embedder, err := gemini.NewEmbedder(geminiKey)
 		if err == nil {
 			deps.Embedder = embedder
 		} else {
 			fmt.Printf("Warning: Failed to initialize Gemini embedder: %v\n", err)
 		}
+	} else {
+		fmt.Println("Warning: No Gemini API Key found in config or GEMINI_API_KEY env var")
 	}
 
 	// Vector Store
 	// Check for Qdrant env vars or config
 	qURL := cfg.Qdrant.URL
 	if qURL == "" {
+		qURL = os.Getenv("QDRANT_URL")
+	}
+	if qURL == "" {
 		qURL = "localhost:6334" // Default
 	}
+
 	qKey := cfg.Qdrant.APIKey
+	if qKey == "" {
+		qKey = os.Getenv("QDRANT_API_KEY")
+	}
 
 	qdrantClient, err := qdrant.NewClient(qURL, qKey)
 	if err == nil {
@@ -142,8 +201,9 @@ func runProcess() {
 	}
 
 	// LLM Client
-	if apiKey := os.Getenv("GEMINI_API_KEY"); apiKey != "" {
-		llm, err := gemini.NewLLMClient(apiKey)
+	// Re-use geminiKey resolved above
+	if geminiKey != "" {
+		llm, err := gemini.NewLLMClient(geminiKey)
 		if err == nil {
 			deps.LLMClient = llm
 		} else {
