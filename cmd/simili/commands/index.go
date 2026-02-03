@@ -87,7 +87,7 @@ func runIndex(cmd *cobra.Command, args []string) {
 
 	ghClient := similiGithub.NewClient(ctx, token)
 
-	geminiClient, err := gemini.NewEmbedder(cfg.Embedding.APIKey)
+	geminiClient, err := gemini.NewEmbedder(cfg.Embedding.APIKey, cfg.Embedding.Model)
 	if err != nil {
 		log.Fatalf("Failed to init Gemini: %v", err)
 	}
