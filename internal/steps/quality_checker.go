@@ -31,6 +31,10 @@ func (s *QualityChecker) Name() string {
 
 // Run assesses issue quality.
 func (s *QualityChecker) Run(ctx *pipeline.Context) error {
+	// Only run on new issues, skip for comments/commands
+	if ctx.Issue.EventType == "issue_comment" {
+		return nil
+	}
 	if s.llm == nil {
 		log.Printf("[quality_checker] No LLM client, skipping quality assessment")
 		return nil

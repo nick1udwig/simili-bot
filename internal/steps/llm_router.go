@@ -32,6 +32,10 @@ func (s *LLMRouter) Name() string {
 
 // Run analyzes issue and routes to best repository.
 func (s *LLMRouter) Run(ctx *pipeline.Context) error {
+	// Only run on new issues, skip for comments/commands
+	if ctx.Issue.EventType == "issue_comment" {
+		return nil
+	}
 	// Skip if LLM routing is disabled or no LLM client
 	if ctx.Config.Transfer.LLMRoutingEnabled == nil || !*ctx.Config.Transfer.LLMRoutingEnabled || s.llm == nil {
 		log.Printf("[llm_router] LLM routing disabled or no client, skipping")

@@ -33,8 +33,18 @@ func (s *CommandHandler) Name() string {
 // Run checks for commands in issue comments.
 func (s *CommandHandler) Run(ctx *pipeline.Context) error {
 	// Handle specific commands in comment events
-	if ctx.Issue.EventType == "issue_comment" && ctx.Issue.CommentBody != "" {
-		command := strings.TrimSpace(strings.ToLower(ctx.Issue.CommentBody))
+	if ctx.Issue.EventType == "issue_comment" {
+		body := strings.TrimSpace(ctx.Issue.CommentBody)
+		if body == "" {
+			return pipeline.ErrSkipPipeline
+		}
+
+		// Self-prevention: Ignore bot's own reports even if using PAT
+		if strings.Contains(body, "🤖 Simili Triage Report") {
+			return pipeline.ErrSkipPipeline
+		}
+
+		command := strings.ToLower(body)
 		if strings.HasPrefix(command, "/") {
 			log.Printf("[command_handler] Processing command: %s", command)
 			switch {
@@ -43,8 +53,14 @@ func (s *CommandHandler) Run(ctx *pipeline.Context) error {
 			default:
 				log.Printf("[command_handler] Unknown command: %s", command)
 			}
+			// After processing a command, we might want to continue to ActionExecutor,
+			// but we definitely want to skip the intermediate triage steps.
+			// However, since we can't "jump", we let it return nil and other steps must skip comments.
+			return nil
 		}
-		return nil
+
+		// Not a command? Skip the entire triage pipeline for comments.
+		return pipeline.ErrSkipPipeline
 	}
 
 	// For standard issue events, check history for undo commands to prevent loops

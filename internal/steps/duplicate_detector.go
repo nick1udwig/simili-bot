@@ -31,6 +31,10 @@ func (s *DuplicateDetector) Name() string {
 
 // Run analyzes similar issues for duplicates.
 func (s *DuplicateDetector) Run(ctx *pipeline.Context) error {
+	// Only run on new issues, skip for comments/commands
+	if ctx.Issue.EventType == "issue_comment" {
+		return nil
+	}
 	if s.llm == nil {
 		log.Printf("[duplicate_detector] No LLM client, skipping duplicate detection")
 		return nil
