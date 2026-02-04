@@ -33,7 +33,7 @@ func (s *LLMRouter) Name() string {
 // Run analyzes issue and routes to best repository.
 func (s *LLMRouter) Run(ctx *pipeline.Context) error {
 	// Skip if LLM routing is disabled or no LLM client
-	if !ctx.Config.Transfer.LLMRoutingEnabled || s.llm == nil {
+	if ctx.Config.Transfer.LLMRoutingEnabled == nil || !*ctx.Config.Transfer.LLMRoutingEnabled || s.llm == nil {
 		log.Printf("[llm_router] LLM routing disabled or no client, skipping")
 		return nil
 	}

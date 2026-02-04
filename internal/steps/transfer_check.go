@@ -29,7 +29,7 @@ func (s *TransferCheck) Name() string {
 // Run checks if the issue should be transferred using transfer rules.
 func (s *TransferCheck) Run(ctx *pipeline.Context) error {
 	// Skip if transfer is not enabled or no rules configured
-	if !ctx.Config.Transfer.Enabled || len(ctx.Config.Transfer.Rules) == 0 {
+	if ctx.Config.Transfer.Enabled == nil || !*ctx.Config.Transfer.Enabled || len(ctx.Config.Transfer.Rules) == 0 {
 		log.Printf("[transfer_check] Transfer not enabled or no rules, skipping")
 		return nil
 	}

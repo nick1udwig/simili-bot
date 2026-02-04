@@ -61,7 +61,7 @@ type EmbeddingConfig struct {
 type DefaultsConfig struct {
 	SimilarityThreshold float64 `yaml:"similarity_threshold"`
 	MaxSimilarToShow    int     `yaml:"max_similar_to_show"`
-	CrossRepoSearch     bool    `yaml:"cross_repo_search"`
+	CrossRepoSearch     *bool   `yaml:"cross_repo_search,omitempty"`
 }
 
 // RepositoryConfig defines a repository and its settings.
@@ -88,9 +88,9 @@ type TransferRule struct {
 
 // TransferConfig holds transfer routing settings.
 type TransferConfig struct {
-	Enabled                      bool           `yaml:"enabled"`
+	Enabled                      *bool          `yaml:"enabled,omitempty"`
 	Rules                        []TransferRule `yaml:"rules,omitempty"`
-	LLMRoutingEnabled            bool           `yaml:"llm_routing_enabled,omitempty"`
+	LLMRoutingEnabled            *bool          `yaml:"llm_routing_enabled,omitempty"`
 	HighConfidence               float64        `yaml:"high_confidence,omitempty"`                // Default: 0.9
 	MediumConfidence             float64        `yaml:"medium_confidence,omitempty"`              // Default: 0.6
 	DuplicateConfidenceThreshold float64        `yaml:"duplicate_confidence_threshold,omitempty"` // Default: 0.8
@@ -183,13 +183,25 @@ func (c *Config) applyDefaults() {
 	if c.Defaults.MaxSimilarToShow == 0 {
 		c.Defaults.MaxSimilarToShow = 5
 	}
+	if c.Defaults.CrossRepoSearch == nil {
+		f := false
+		c.Defaults.CrossRepoSearch = &f
+	}
 	if c.Embedding.Provider == "" {
 		c.Embedding.Provider = "gemini"
 	}
 	if c.Embedding.Dimensions == 0 {
 		c.Embedding.Dimensions = 768
 	}
-	// Transfer LLM routing defaults
+	// Transfer defaults
+	if c.Transfer.Enabled == nil {
+		f := false
+		c.Transfer.Enabled = &f
+	}
+	if c.Transfer.LLMRoutingEnabled == nil {
+		f := false
+		c.Transfer.LLMRoutingEnabled = &f
+	}
 	if c.Transfer.HighConfidence == 0 {
 		c.Transfer.HighConfidence = 0.9
 	}
@@ -243,18 +255,22 @@ func mergeConfigs(parent, child *Config) *Config {
 	if child.Defaults.MaxSimilarToShow != 0 {
 		result.Defaults.MaxSimilarToShow = child.Defaults.MaxSimilarToShow
 	}
-	// CrossRepoSearch: always take the child value so it can override parent true -> false and vice versa
-	result.Defaults.CrossRepoSearch = child.Defaults.CrossRepoSearch
+	if child.Defaults.CrossRepoSearch != nil {
+		result.Defaults.CrossRepoSearch = child.Defaults.CrossRepoSearch
+	}
 
 	// Repositories: child completely overrides if non-empty
 	if len(child.Repositories) > 0 {
 		result.Repositories = child.Repositories
 	}
 
-	// Transfer.Enabled: always take the child value so it can override parent true -> false and vice versa
-	result.Transfer.Enabled = child.Transfer.Enabled
-	result.Transfer.LLMRoutingEnabled = child.Transfer.LLMRoutingEnabled
-	// Transfer.Rules: child overrides rules if non-empty; otherwise inherit from parent
+	// Transfer: override if fields are set
+	if child.Transfer.Enabled != nil {
+		result.Transfer.Enabled = child.Transfer.Enabled
+	}
+	if child.Transfer.LLMRoutingEnabled != nil {
+		result.Transfer.LLMRoutingEnabled = child.Transfer.LLMRoutingEnabled
+	}
 	if len(child.Transfer.Rules) > 0 {
 		result.Transfer.Rules = child.Transfer.Rules
 	}

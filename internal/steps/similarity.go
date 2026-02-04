@@ -47,6 +47,9 @@ func (s *SimilaritySearch) Run(ctx *pipeline.Context) error {
 	threshold := ctx.Config.Defaults.SimilarityThreshold
 	limit := ctx.Config.Defaults.MaxSimilarToShow
 
+	// Cross-repo search logic could be added here if needed, but current implementation
+	// depends on the collection containing all org issues.
+
 	// Skip if dependencies are missing (e.g. testing mode)
 	if s.embedder == nil || s.store == nil {
 		log.Printf("[similarity_search] WARNING: Dependencies missing, skipping search")
