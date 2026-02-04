@@ -38,6 +38,12 @@ func (s *LLMRouter) Run(ctx *pipeline.Context) error {
 		return nil
 	}
 
+	// Check if transfer is blocked (e.g. by undo history)
+	if blocked, _ := ctx.Metadata["transfer_blocked"].(bool); blocked {
+		log.Printf("[llm_router] Transfer blocked by metadata flag")
+		return nil
+	}
+
 	// Skip if transfer already determined by rules
 	if ctx.TransferTarget != "" {
 		log.Printf("[llm_router] Transfer already determined by rules, skipping LLM routing")

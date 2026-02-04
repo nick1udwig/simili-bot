@@ -32,23 +32,50 @@ func (s *CommandHandler) Name() string {
 
 // Run checks for commands in issue comments.
 func (s *CommandHandler) Run(ctx *pipeline.Context) error {
-	// Only process issue_comment events
-	if ctx.Issue.EventType != "issue_comment" || ctx.Issue.CommentBody == "" {
+	// Handle specific commands in comment events
+	if ctx.Issue.EventType == "issue_comment" && ctx.Issue.CommentBody != "" {
+		command := strings.TrimSpace(strings.ToLower(ctx.Issue.CommentBody))
+		if strings.HasPrefix(command, "/") {
+			log.Printf("[command_handler] Processing command: %s", command)
+			switch {
+			case strings.HasPrefix(command, "/undo"):
+				return s.handleUndo(ctx)
+			default:
+				log.Printf("[command_handler] Unknown command: %s", command)
+			}
+		}
 		return nil
 	}
 
-	command := strings.TrimSpace(strings.ToLower(ctx.Issue.CommentBody))
-	if !strings.HasPrefix(command, "/") {
+	// For standard issue events, check history for undo commands to prevent loops
+	if ctx.Issue.EventType == "issues" {
+		return s.checkHistoryForUndo(ctx)
+	}
+
+	return nil
+}
+
+// checkHistoryForUndo checks if there is a recent /undo command to block transfers
+func (s *CommandHandler) checkHistoryForUndo(ctx *pipeline.Context) error {
+	if s.gh == nil {
 		return nil
 	}
 
-	log.Printf("[command_handler] Processing command: %s", command)
+	// Fetch recent comments
+	comments, _, err := s.gh.ListComments(ctx.Ctx, ctx.Issue.Org, ctx.Issue.Repo, ctx.Issue.Number, nil)
+	if err != nil {
+		log.Printf("[command_handler] Failed to list comments: %v", err)
+		return nil // Non-fatal
+	}
 
-	switch {
-	case strings.HasPrefix(command, "/undo"):
-		return s.handleUndo(ctx)
-	default:
-		log.Printf("[command_handler] Unknown command: %s", command)
+	// Look for /undo in comments
+	for _, c := range comments {
+		body := strings.TrimSpace(c.GetBody())
+		if strings.EqualFold(body, "/undo") {
+			log.Printf("[command_handler] Found /undo in history. Blocking auto-transfer.")
+			ctx.Metadata["transfer_blocked"] = true
+			return nil
+		}
 	}
 
 	return nil

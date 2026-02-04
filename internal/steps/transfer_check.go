@@ -34,6 +34,12 @@ func (s *TransferCheck) Run(ctx *pipeline.Context) error {
 		return nil
 	}
 
+	// Check if transfer is blocked (e.g. by undo history)
+	if blocked, _ := ctx.Metadata["transfer_blocked"].(bool); blocked {
+		log.Printf("[transfer_check] Transfer blocked by metadata flag")
+		return nil
+	}
+
 	log.Printf("[transfer_check] Checking transfer rules for issue #%d", ctx.Issue.Number)
 
 	// Create the rule matcher
