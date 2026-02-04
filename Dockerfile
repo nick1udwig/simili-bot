@@ -1,5 +1,7 @@
 FROM golang:1.24-alpine AS builder
 
+LABEL build_date="2026-02-04"
+
 WORKDIR /app
 
 COPY go.mod go.sum ./
