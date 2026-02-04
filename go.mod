@@ -9,11 +9,11 @@ require (
 	github.com/google/generative-ai-go v0.20.1
 	github.com/google/go-github/v60 v60.0.0
 	github.com/google/uuid v1.6.0
-	github.com/qdrant/go-client v1.16.2
+	github.com/qdrant/go-client v1.15.2
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/oauth2 v0.34.0
+	golang.org/x/oauth2 v0.27.0
 	google.golang.org/api v0.186.0
-	google.golang.org/grpc v1.76.0
+	google.golang.org/grpc v1.73.0-dev
 	gopkg.in/yaml.v3 v3.0.1
 )
 
