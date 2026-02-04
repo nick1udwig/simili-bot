@@ -1,6 +1,6 @@
 module github.com/similigh/simili-bot
 
-go 1.24.2
+go 1.23.0
 
 require (
 	github.com/google/generative-ai-go v0.20.1
