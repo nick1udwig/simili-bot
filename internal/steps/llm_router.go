@@ -50,6 +50,8 @@ func (s *LLMRouter) Run(ctx *pipeline.Context) error {
 		return nil
 	}
 
+	blockedTargets, _ := ctx.Metadata["blocked_targets"].([]string)
+
 	log.Printf("[llm_router] Analyzing issue #%d for routing", ctx.Issue.Number)
 
 	// Collect repository candidates (exclude current repo, require description)
@@ -102,6 +104,14 @@ func (s *LLMRouter) Run(ctx *pipeline.Context) error {
 		ctx.Result.TransferReason = result.BestMatch.Reasoning
 
 		if confidence >= ctx.Config.Transfer.MediumConfidence {
+			// Check if target is blocked
+			for _, blocked := range blockedTargets {
+				if blocked == targetRepo {
+					log.Printf("[llm_router] Skipping proactive transfer to %s: detected loop (blocked target)", targetRepo)
+					return nil
+				}
+			}
+
 			// Proactive transfer: auto-transfer if confidence is medium or higher
 			ctx.TransferTarget = targetRepo
 			ctx.Result.TransferTarget = targetRepo

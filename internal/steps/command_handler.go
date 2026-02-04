@@ -49,14 +49,14 @@ func (s *CommandHandler) Run(ctx *pipeline.Context) error {
 
 	// For standard issue events, check history for undo commands to prevent loops
 	if ctx.Issue.EventType == "issues" {
-		return s.checkHistoryForUndo(ctx)
+		return s.analyzeHistoryForLoops(ctx)
 	}
 
 	return nil
 }
 
-// checkHistoryForUndo checks if there is a recent /undo command to block transfers
-func (s *CommandHandler) checkHistoryForUndo(ctx *pipeline.Context) error {
+// analyzeHistoryForLoops checks history for undo commands and previous transfers to preventing loops
+func (s *CommandHandler) analyzeHistoryForLoops(ctx *pipeline.Context) error {
 	if s.gh == nil {
 		return nil
 	}
@@ -68,14 +68,30 @@ func (s *CommandHandler) checkHistoryForUndo(ctx *pipeline.Context) error {
 		return nil // Non-fatal
 	}
 
-	// Look for /undo in comments
+	var blockedTargets []string
+
+	// Analyze comments
 	for _, c := range comments {
 		body := strings.TrimSpace(c.GetBody())
+
+		// Check for /undo command
 		if strings.EqualFold(body, "/undo") {
 			log.Printf("[command_handler] Found /undo in history. Blocking auto-transfer.")
 			ctx.Metadata["transfer_blocked"] = true
-			return nil
 		}
+
+		// Check for previous transfers (hot-potato loop prevention)
+		if strings.Contains(body, "🤖 Simili Triage Report") && strings.Contains(body, "Transferred from") {
+			sourceRepo := s.extractSourceRepo(body)
+			if sourceRepo != "" {
+				log.Printf("[command_handler] Found previous transfer from %s. Blocking return transfer.", sourceRepo)
+				blockedTargets = append(blockedTargets, sourceRepo)
+			}
+		}
+	}
+
+	if len(blockedTargets) > 0 {
+		ctx.Metadata["blocked_targets"] = blockedTargets
 	}
 
 	return nil
