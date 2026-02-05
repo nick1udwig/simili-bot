@@ -163,12 +163,24 @@ Decision-Making Framework:
 Note: Limited repository documentation available. Base routing primarily on repository descriptions.`
 	}
 
+	// Add current repo context if provided
+	currentRepoGuidance := ""
+	if input.CurrentRepo != "" {
+		currentRepoGuidance = fmt.Sprintf(`
+IMPORTANT - Current Repository Context:
+- This issue was created in: %s
+- Default assumption: Issues should STAY in their current repository unless there is CLEAR evidence they belong elsewhere
+- Only recommend transfer if you are CONFIDENT (>= 0.7) the issue truly belongs in a different repository
+- When in doubt, keep the issue in its current repository
+`, input.CurrentRepo)
+	}
+
 	return fmt.Sprintf(`You are an AI assistant helping route GitHub issues to the correct repository.
 
 Issue Details:
 - Title: %s
 - Body: %s
-
+%s
 Available Repositories:
 %s
 %s
@@ -193,12 +205,14 @@ Respond with valid JSON in this exact format:
 
 Confidence Score Guidelines:
 - 0.9+ = Very strong match (issue clearly aligns with repo's documented responsibilities)
-- 0.6-0.9 = Probable match (issue has significant alignment with repo's purpose)
-- <0.6 = Weak or no match (little to no alignment with repo's documented purpose)
+- 0.7-0.9 = Strong match (issue has significant alignment with repo's purpose)
+- 0.5-0.7 = Moderate match (some alignment but not definitive)
+- <0.5 = Weak or no match (little to no alignment with repo's documented purpose)
 
 Important: Include ALL repositories in your rankings, even those with low confidence scores.`,
 		input.Issue.Title,
 		truncate(input.Issue.Body, 1000),
+		currentRepoGuidance,
 		repoList.String(),
 		weightingGuidance,
 	)

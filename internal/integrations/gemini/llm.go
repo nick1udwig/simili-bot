@@ -51,6 +51,7 @@ type TriageResult struct {
 type RouteIssueInput struct {
 	Issue        *IssueInput
 	Repositories []RepositoryCandidate
+	CurrentRepo  string // Current repository (org/repo) where issue was created
 }
 
 // RepositoryCandidate represents a repository option for routing.

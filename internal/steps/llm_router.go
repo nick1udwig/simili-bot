@@ -63,13 +63,12 @@ func (s *LLMRouter) Run(ctx *pipeline.Context) error {
 
 	log.Printf("[llm_router] Analyzing issue #%d for routing", ctx.Issue.Number)
 
-	// Collect repository candidates (exclude current repo, require description)
+	// Collect repository candidates (include current repo to allow "stay here" decision)
 	var candidates []gemini.RepositoryCandidate
 	currentRepo := fmt.Sprintf("%s/%s", ctx.Issue.Org, ctx.Issue.Repo)
 
 	for _, repo := range ctx.Config.Repositories {
-		repoName := fmt.Sprintf("%s/%s", repo.Org, repo.Repo)
-		if !repo.Enabled || repoName == currentRepo || repo.Description == "" {
+		if !repo.Enabled || repo.Description == "" {
 			continue
 		}
 		candidates = append(candidates, gemini.RepositoryCandidate{
@@ -171,7 +170,8 @@ func (s *LLMRouter) Run(ctx *pipeline.Context) error {
 		}
 	}
 
-	// Call LLM to route issue
+	// Call LLM to route issue (reuse currentRepo from above)
+	currentRepo = fmt.Sprintf("%s/%s", ctx.Issue.Org, ctx.Issue.Repo)
 	input := &gemini.RouteIssueInput{
 		Issue: &gemini.IssueInput{
 			Title:  ctx.Issue.Title,
@@ -180,6 +180,7 @@ func (s *LLMRouter) Run(ctx *pipeline.Context) error {
 			Labels: ctx.Issue.Labels,
 		},
 		Repositories: candidates,
+		CurrentRepo:  currentRepo,
 	}
 
 	result, err := s.llm.RouteIssue(ctx.Ctx, input)
@@ -199,6 +200,13 @@ func (s *LLMRouter) Run(ctx *pipeline.Context) error {
 		ctx.Result.TransferConfidence = confidence
 		ctx.Result.TransferReason = result.BestMatch.Reasoning
 
+		// Only transfer if best match is a DIFFERENT repository
+		if targetRepo == currentRepo {
+			log.Printf("[llm_router] Issue belongs in current repo %s (%.2f confidence), no transfer needed",
+				currentRepo, confidence)
+			return nil
+		}
+
 		if confidence >= ctx.Config.Transfer.MediumConfidence {
 			// Check if target is blocked
 			for _, blocked := range blockedTargets {
@@ -211,11 +219,11 @@ func (s *LLMRouter) Run(ctx *pipeline.Context) error {
 			// Proactive transfer: auto-transfer if confidence is medium or higher
 			ctx.TransferTarget = targetRepo
 			ctx.Result.TransferTarget = targetRepo
-			ctx.Metadata["original_repo"] = fmt.Sprintf("%s/%s", ctx.Issue.Org, ctx.Issue.Repo)
-			log.Printf("[llm_router] Proactive transfer (%.2f) to %s", confidence, targetRepo)
+			ctx.Metadata["original_repo"] = currentRepo
+			log.Printf("[llm_router] Proactive transfer (%.2f) from %s to %s", confidence, currentRepo, targetRepo)
 		} else {
 			// Low confidence: silent
-			log.Printf("[llm_router] Low confidence (%.2f), no action", confidence)
+			log.Printf("[llm_router] Low confidence (%.2f) for transfer to %s, keeping in %s", confidence, targetRepo, currentRepo)
 		}
 	}
 
