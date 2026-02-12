@@ -91,9 +91,13 @@ func runIndex(cmd *cobra.Command, args []string) {
 
 	geminiClient, err := gemini.NewEmbedder(cfg.Embedding.APIKey, cfg.Embedding.Model)
 	if err != nil {
-		log.Fatalf("Failed to init Gemini: %v", err)
+		log.Fatalf("Failed to init embedder: %v", err)
 	}
 	defer geminiClient.Close()
+	embeddingDimensions := cfg.Embedding.Dimensions
+	if dim := geminiClient.Dimensions(); dim > 0 {
+		embeddingDimensions = dim
+	}
 
 	var qdrantClient *qdrant.Client
 	if !indexDryRun {
@@ -104,7 +108,7 @@ func runIndex(cmd *cobra.Command, args []string) {
 		defer qdrantClient.Close()
 
 		// Ensure collection exists
-		err = qdrantClient.CreateCollection(ctx, cfg.Qdrant.Collection, cfg.Embedding.Dimensions)
+		err = qdrantClient.CreateCollection(ctx, cfg.Qdrant.Collection, embeddingDimensions)
 		if err != nil {
 			log.Fatalf("Failed to create/verify collection: %v", err)
 		}
