@@ -63,7 +63,11 @@ func (s *CommandHandler) Run(ctx *pipeline.Context) error {
 		return pipeline.ErrSkipPipeline
 	}
 
-	// For standard issue/PR events, check history for undo commands to prevent loops
+	// For issue, pull_request, and pr_comment events, scan comment history to prevent
+	// transfer loops and respect prior /undo commands.
+	// issue_comment is handled exclusively above: /undo is dispatched, unknown slash-
+	// commands return nil without further processing, and non-command comments skip the
+	// pipeline entirely — so it never reaches this point.
 	if ctx.Issue.EventType == "issues" || ctx.Issue.EventType == "pull_request" || ctx.Issue.EventType == "pr_comment" {
 		return s.analyzeHistoryForLoops(ctx)
 	}
