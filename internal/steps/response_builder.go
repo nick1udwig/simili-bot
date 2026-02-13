@@ -228,9 +228,9 @@ func (s *ResponseBuilder) buildSimilarSection(ctx *pipeline.Context) string {
 
 	var parts []string
 	parts = append(parts, "<details>")
-	parts = append(parts, "<summary>Similar Issues</summary>")
+	parts = append(parts, "<summary>Similar Threads</summary>")
 	parts = append(parts, "")
-	parts = append(parts, "| Similarity | Issue | Status |")
+	parts = append(parts, "| Similarity | Thread | Status |")
 	parts = append(parts, "| :--- | :--- | :--- |")
 
 	for _, similar := range ctx.SimilarIssues {
@@ -267,7 +267,11 @@ func (s *ResponseBuilder) buildDuplicateSection(ctx *pipeline.Context) string {
 
 	parts = append(parts, "> [!WARNING]")
 	parts = append(parts, fmt.Sprintf("> **Possible Duplicate** (Confidence: %d%%)", confidencePct))
-	parts = append(parts, fmt.Sprintf("> This issue might be a duplicate of #%d.", duplicateResult.DuplicateOf))
+	subject := "issue"
+	if ctx.Issue.EventType == "pull_request" || ctx.Issue.EventType == "pr_comment" {
+		subject = "pull request"
+	}
+	parts = append(parts, fmt.Sprintf("> This %s might be a duplicate of #%d.", subject, duplicateResult.DuplicateOf))
 
 	if duplicateResult.Reasoning != "" {
 		parts = append(parts, fmt.Sprintf("> _Reason: %s_", duplicateResult.Reasoning))
