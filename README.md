@@ -17,6 +17,8 @@
 
 Automatically detect duplicate issues, find similar issues with semantic search, and intelligently route issues across repositories.
 
+[![Star History Chart](https://api.star-history.com/svg?repos=similigh/simili-bot&type=date&legend=top-left)](https://www.star-history.com/#similigh/simili-bot&type=date&legend=top-left)
+
 ---
 
 ## Features
@@ -187,10 +189,6 @@ go vet ./...
 ## License
 
 This project is licensed under the Apache License 2.0 — see the [LICENSE](LICENSE) file for details.
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=similigh/simili-bot&type=date&legend=top-left)](https://www.star-history.com/#similigh/simili-bot&type=date&legend=top-left)
 
 ---
 
