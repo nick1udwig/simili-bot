@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/generative-ai-go/genai"
@@ -28,7 +29,7 @@ type Embedder struct {
 	openAI     *http.Client
 	apiKey     string
 	model      string
-	dimensions int
+	dimensions atomic.Int32
 }
 
 // NewEmbedder creates a new embedder.
@@ -64,7 +65,7 @@ func NewEmbedder(apiKey, model string) (*Embedder, error) {
 	}
 
 	e.model = strings.TrimSpace(model)
-	e.dimensions = inferEmbeddingDimensions(provider, e.model)
+	e.dimensions.Store(int32(inferEmbeddingDimensions(provider, e.model)))
 
 	return e, nil
 }
@@ -146,7 +147,7 @@ func (e *Embedder) embedOpenAI(ctx context.Context, text string) ([]float32, err
 	}
 
 	// Keep the dimensions aligned with provider output if model mapping is unknown.
-	e.dimensions = len(embedding)
+	e.dimensions.Store(int32(len(embedding)))
 	return embedding, nil
 }
 
@@ -170,7 +171,7 @@ func (e *Embedder) EmbedBatch(ctx context.Context, texts []string) ([][]float32,
 
 // Dimensions returns the dimensionality of the embeddings.
 func (e *Embedder) Dimensions() int {
-	return e.dimensions
+	return int(e.dimensions.Load())
 }
 
 func inferEmbeddingDimensions(provider Provider, model string) int {
