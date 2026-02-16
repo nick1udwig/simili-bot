@@ -321,7 +321,7 @@ func (l *LLMClient) generateGeminiText(ctx context.Context, prompt string, tempe
 		return "", err
 	}
 
-	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+	if len(resp.Candidates) == 0 || resp.Candidates[0] == nil || resp.Candidates[0].Content == nil || len(resp.Candidates[0].Content.Parts) == 0 {
 		return "", fmt.Errorf("empty response from LLM")
 	}
 
